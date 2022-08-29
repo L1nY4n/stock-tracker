@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'stock_tracker'",
+            "name": "Debug executable 'stock-tracker'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=stock_tracker",
-                    "--package=stock_tracker"
+                    "--bin=stock-tracker",
+                    "--package=stock-tracker"
                 ],
                 "filter": {
-                    "name": "stock_tracker",
+                    "name": "stock-tracker",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'stock_tracker'",
+            "name": "Debug unit tests in executable 'stock-tracker'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=stock_tracker",
-                    "--package=stock_tracker"
+                    "--bin=stock-tracker",
+                    "--package=stock-tracker"
                 ],
                 "filter": {
-                    "name": "stock_tracker",
+                    "name": "stock-tracker",
                     "kind": "bin"
                 }
             },
