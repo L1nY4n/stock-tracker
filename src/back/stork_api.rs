@@ -7,7 +7,6 @@ const BASE_URL: &str = "http://hq.sinajs.cn";
 const LEN: usize = "var hq_str_cc000000=\"\";".len();
 lazy_static! {
     static ref REG: Regex = Regex::new(r"(^(sz|sh)\d{6}$)").unwrap();
-
 }
 
 pub fn check_stock_code(code: &str) -> bool {

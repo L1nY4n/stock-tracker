@@ -4,7 +4,7 @@ use crossbeam::{
     channel::{tick, Receiver, Sender},
     select,
 };
-use tracing::{error, info};
+use tracing::{error};
 
 pub mod message;
 use message::{ToBackend, ToFrontend};
@@ -18,17 +18,19 @@ pub struct Back {
 }
 
 impl Back {
-    pub fn new(back_tx: Sender<ToFrontend>, front_rx: Receiver<ToBackend>,codes: String) -> Self {
-       let  stock_codes = codes.split(",").map(|x|x.to_string()).collect::<Vec<String>>();
+    pub fn new(back_tx: Sender<ToFrontend>, front_rx: Receiver<ToBackend>, codes: String) -> Self {
+        let stock_codes = codes
+            .split(",")
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>();
         Self {
             back_tx,
             front_rx,
-            stock_codes
+            stock_codes,
         }
     }
 
     pub fn init(&mut self) {
-        info!("Initializing backend");
         self.refetch(false);
         #[warn(unused_assignments)]
         let mut ticker = tick(Duration::from_secs(5));
@@ -64,21 +66,21 @@ impl Back {
         }
     }
 
-    fn refetch(&self,focus: bool){
-        if !self.stock_codes.is_empty(){
+    fn refetch(&self, focus: bool) {
+        if !self.stock_codes.is_empty() {
             match stork_api::fetch_blocking(self.stock_codes.clone()) {
-                            Ok(stocks) => {
-                                let dl = ToFrontend::DataList(stocks);
-                                self.back_tx.send(dl).ok();
-                            }
-                            Err(e) => {
-                                error!(e)
-                            }
-                        }
-                      }
+                Ok(stocks) => {
+                    let dl = ToFrontend::DataList(stocks);
+                    self.back_tx.send(dl).ok();
+                }
+                Err(e) => {
+                    error!(e)
+                }
+            }
+        }
 
-                    if  focus {   self.back_tx.send( ToFrontend::DataList(vec!())).ok();}
-                      
+        if focus {
+            self.back_tx.send(ToFrontend::DataList(vec![])).ok();
+        }
     }
-
 }

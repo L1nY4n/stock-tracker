@@ -1,5 +1,6 @@
-use eframe::{epaint::Vec2, run_native, NativeOptions};
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use eframe::{epaint::Vec2, run_native, NativeOptions};
 use stock_tracker::ui::StockTrackerApp;
 use tracing_subscriber;
 

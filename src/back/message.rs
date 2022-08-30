@@ -3,7 +3,7 @@ pub enum ToBackend {
     Refresh,
     SetInterval(u32),
     StockAdd(String),
-    StockDel(String)
+    StockDel(String),
 }
 
 #[derive(Debug)]

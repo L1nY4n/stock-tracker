@@ -1,7 +1,6 @@
-use std::thread;
-
 use crate::back::message::Stock;
 use crate::back::stork_api;
+use std::thread;
 
 use eframe::{
     egui::{
@@ -76,9 +75,8 @@ impl StockTrackerApp {
             }
         }
         let codes = new_app.setting.code.clone();
-        thread::spawn(||{
-            Back::new(back_tx, front_rx,codes).init()
-        });
+        thread::spawn(|| Back::new(back_tx, front_rx, codes).init());
+        new_app.setting.code = String::new();
         new_app.front_tx = Some(front_tx);
         new_app.back_rx = Some(back_rx);
         new_app
