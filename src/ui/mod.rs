@@ -1,18 +1,21 @@
-use crate::back::message::Stock;
 use crate::back::stork_api;
+use crate::back::stork_api::Stock;
 use std::thread;
 
 use eframe::{
     egui::{
-        self, menu, style::DebugOptions, Button, CentralPanel, CollapsingHeader, Context,
-        CursorIcon, Frame, Label, Layout, RichText, Separator, SidePanel, Slider, Style, TextStyle,
-        TopBottomPanel,
+        self, menu,
+        plot::{Bar, BarChart, Plot},
+        style::DebugOptions,
+        Button, CentralPanel, CollapsingHeader, Context, CursorIcon, Frame, Grid, Label, Layout,
+        RichText, Separator, SidePanel, Slider, Style, TextStyle, TopBottomPanel, Window,
     },
     emath::Align,
     epaint::{Color32, Vec2},
     App, CreationContext,
 };
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 use super::back::{
     message::{ToBackend, ToFrontend},
@@ -34,7 +37,8 @@ struct Setting {
     open: bool,
     show_color: bool,
     interval: u32,
-    code: String,
+    stacks: String,
+    adding_code: String,
 }
 
 // fn setup_custom_fonts(ctx: &egui::Context) {
@@ -74,9 +78,8 @@ impl StockTrackerApp {
                 new_app.setting = setting
             }
         }
-        let codes = new_app.setting.code.clone();
+        let codes = new_app.setting.stacks.clone();
         thread::spawn(|| Back::new(back_tx, front_rx, codes).init());
-        new_app.setting.code = String::new();
         new_app.front_tx = Some(front_tx);
         new_app.back_rx = Some(back_rx);
         new_app
@@ -95,7 +98,7 @@ impl StockTrackerApp {
         ctx.set_style(style);
     }
 
-    pub fn render_top_panel(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
+    fn render_top_panel(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         // define a TopBottomPanel widget
         let f = Frame::none();
         TopBottomPanel::top("top_panel").frame(f).show(ctx, |ui| {
@@ -155,54 +158,175 @@ impl StockTrackerApp {
         });
     }
 
-    fn render_stocks(&self, ui: &mut eframe::egui::Ui) {
-        use egui_extras::{Size, TableBuilder};
+    // fn render_stocks(&self, ui: &mut eframe::egui::Ui) {
+    //     use egui_extras::{Size, TableBuilder};
+    //     ui.add_space(2.0);
+    //     TableBuilder::new(ui)
+    //         .striped(true)
+    //         .cell_layout(egui::Layout::left_to_right(Align::Center))
+    //         .column(Size::initial(60.0))
+    //         .column(Size::initial(40.0).at_least(20.0))
+    //         .column(Size::remainder().at_least(30.0))
+    //         .resizable(false)
+    //         .body(|mut body| {
+    //             for s in &self.stocks {
+    //                 body.row(18.0, |mut row| {
+    //                     row.col(|ui| {
+    //                         ui.centered_and_justified(|ui| {
+    //                             ui.add(Label::new(
+    //                                 RichText::new(s.name.to_string())
+    //                                     .text_style(egui::TextStyle::Body),
+    //                             ));
+    //                         });
+    //                     });
+    //                     row.col(|ui| {
+    //                         ui.centered_and_justified(|ui| {
+    //                             ui.add(Label::new(
+    //                                 RichText::new(s.new.to_string())
+    //                                     .text_style(egui::TextStyle::Body),
+    //                             ));
+    //                         });
+    //                     });
+    //                     row.col(|ui| {
+    //                         let color = if self.setting.show_color {
+    //                             match s.rise_per {
+    //                                 p if p < 0.0 => Color32::GREEN,
+    //                                 n if n > 0.0 => Color32::RED,
+    //                                 _ => Color32::WHITE,
+    //                             }
+    //                         } else {
+    //                             Color32::WHITE
+    //                         };
+    //                         //   ui.centered_and_justified(|ui| {
+    //                         ui.add(Label::new(
+    //                             RichText::new(s.rise_per.to_string())
+    //                                 .text_style(egui::TextStyle::Body)
+    //                                 .color(color),
+    //                         ));
+    //                         //   });
+    //                     });
+    //                 })
+    //             }
+    //         });
+    // }
+
+    fn render_stocks(&self, ctx: &Context, ui: &mut eframe::egui::Ui) {
         ui.add_space(2.0);
-        TableBuilder::new(ui)
+        Grid::new("stock_grid")
+            .max_col_width(60.0)
+            // .min_row_height(18.0)
             .striped(true)
-            .cell_layout(egui::Layout::left_to_right(Align::Center))
-            .column(Size::initial(60.0))
-            .column(Size::initial(40.0).at_least(20.0))
-            .column(Size::remainder().at_least(30.0))
-            .resizable(false)
-            .body(|mut body| {
-                for s in &self.stocks {
-                    body.row(18.0, |mut row| {
-                        row.col(|ui| {
-                            ui.centered_and_justified(|ui| {
-                                ui.add(Label::new(
-                                    RichText::new(s.name.to_string())
-                                        .text_style(egui::TextStyle::Body),
-                                ));
-                            });
+            .show(ui, |ui| {
+                for stock in &self.stocks {
+                    ui.centered_and_justified(|ui| {
+                        ui.add(Label::new(
+                            RichText::new(stock.name.to_string()).text_style(egui::TextStyle::Body),
+                        ));
+                    });
+                    ui.centered_and_justified(|ui| {
+                        ui.add(Label::new(
+                            RichText::new(stock.new.to_string()).text_style(egui::TextStyle::Body),
+                        ));
+                    });
+                    let color = if self.setting.show_color {
+                        match stock.rise_per {
+                            p if p < 0.0 => Color32::GREEN,
+                            n if n > 0.0 => Color32::RED,
+                            _ => Color32::WHITE,
+                        }
+                    } else {
+                        Color32::WHITE
+                    };
+                    ui.centered_and_justified(|ui| {
+                        ui.add(Label::new(
+                            RichText::new(stock.rise_per.to_string())
+                                .text_style(egui::TextStyle::Body)
+                                .color(color),
+                        ))
+                    });
+                    ui.centered_and_justified(|ui| {
+                        let bids_bars = stock
+                            .bids
+                            .iter()
+                            .map(|(v, p)| Bar::new((p - stock.new).into(), *v as f64).width(0.0080))
+                            .collect();
+
+                        let bid_chart = BarChart::new(bids_bars).color(Color32::LIGHT_GREEN);
+
+                        let asks_bar = stock
+                            .asks
+                            .iter()
+                            .map(|(v, p)| Bar::new((p - stock.new).into(), *v as f64).width(0.0080))
+                            .collect();
+                        let ask_chart = BarChart::new(asks_bar).color(Color32::YELLOW);
+
+                        let plot = Plot::new(stock.code.to_string())
+                            .allow_zoom(false)
+                            .allow_drag(false)
+                            .allow_scroll(false)
+                            .show_axes([false, false])
+                            .height(18.0)
+                            .width(54.0)
+                            .center_x_axis(true)
+                            .data_aspect(0.0001) //    0.01 / 1000
+                            .show(ui, |plot_ui| {
+                                plot_ui.bar_chart(bid_chart);
+                                plot_ui.bar_chart(ask_chart)
+                            })
+                            .response;
+
+                     
+                        plot.on_hover_ui(|ui| {
+                         
+                            ui.horizontal(|ui| {
+                                ui.group(|ui| {
+                                    ui.set_max_size(Vec2::new(60.0,240.0));
+                                    ui.vertical(|ui| {
+                                        for (v, p) in &stock.asks {
+                                            ui.label(format!("{}({})", p, v));
+                                        }
+                                        ui.separator();
+                                        for (v, p) in &stock.bids {
+                                            ui.label(format!("{}({})", p, v));
+                                        }
+                                    });
+                                });
+                                ui.group( | ui| {
+                                    ui.vertical(|ui| {
+                                        let bids = stock
+                                        .bids
+                                        .iter()
+                                        .map(|(v, p)| Bar::new((p - stock.new).into(), *v as f64).width(0.0080))
+                                        .collect();
+                                        let asks = stock
+                                        .asks
+                                        .iter()
+                                        .map(|(v, p)| Bar::new((p - stock.new).into(), *v as f64).width(0.0080))
+                                        .collect();
+
+                                        let bid_chart = BarChart::new(bids).color(Color32::GREEN).horizontal();
+                                        let ask_chart = BarChart::new(asks).color(Color32::YELLOW).horizontal();
+
+                                        Plot::new(stock.code.to_string())
+                                     
+                                        .show_axes([false,true])
+                                       
+                                        .width(80.0)
+                                        .center_y_axis(true)
+                                        .data_aspect(10000.0) 
+                                        .show(ui, |plot_ui| {
+                                            plot_ui.bar_chart(bid_chart);
+                                            plot_ui.bar_chart(ask_chart)
+                                        })
+                                        .response;
+                                    })
+                                })
+                                });
+                      
                         });
-                        row.col(|ui| {
-                            ui.centered_and_justified(|ui| {
-                                ui.add(Label::new(
-                                    RichText::new(s.curr.to_string())
-                                        .text_style(egui::TextStyle::Body),
-                                ));
-                            });
-                        });
-                        row.col(|ui| {
-                            let color = if self.setting.show_color {
-                                match s.percent {
-                                    p if p < 0.0 => Color32::GREEN,
-                                    n if n > 0.0 => Color32::RED,
-                                    _ => Color32::WHITE,
-                                }
-                            } else {
-                                Color32::WHITE
-                            };
-                            //   ui.centered_and_justified(|ui| {
-                            ui.add(Label::new(
-                                RichText::new(s.percent.to_string())
-                                    .text_style(egui::TextStyle::Body)
-                                    .color(color),
-                            ));
-                            //   });
-                        });
-                    })
+                    });
+
+                    ui.end_row();
                 }
             });
     }
@@ -259,7 +383,7 @@ impl StockTrackerApp {
         ui.add(Separator::default().spacing(0.0));
 
         ui.horizontal(|ui| {
-            ui.label(RichText::new("📓").color(Color32::GOLD));
+            ui.label(RichText::new("📓").color(Color32::LIGHT_BLUE));
             CollapsingHeader::new("stocks")
                 .default_open(false)
                 .show(ui, |ui| {
@@ -286,9 +410,14 @@ impl StockTrackerApp {
         });
         ui.add(Separator::default().spacing(0.0));
         ui.horizontal(|ui| {
-            ui.label(RichText::new("➕").color(Color32::LIGHT_BLUE));
+            ui.label(RichText::new("➕").color(Color32::LIGHT_GRAY));
             let Self {
-                setting: Setting { open, code, .. },
+                setting:
+                    Setting {
+                        open,
+                        adding_code: code,
+                        ..
+                    },
                 ..
             } = self;
             let text_color = if stork_api::check_stock_code(&code) {
@@ -336,7 +465,7 @@ impl App for StockTrackerApp {
         CentralPanel::default()
             .frame(Frame::none())
             .show(ctx, |ui| {
-                self.render_stocks(ui);
+                self.render_stocks(ctx, ui);
             });
         self.setting_panel(ctx);
     }
@@ -348,7 +477,7 @@ impl App for StockTrackerApp {
             .map(|s| s.code.clone())
             .collect::<Vec<String>>()
             .join(",");
-        self.setting.code = codes;
+        self.setting.stacks = codes;
         eframe::set_value(storage, eframe::APP_KEY, &self.setting);
     }
 }
