@@ -23,7 +23,7 @@ impl Back {
     pub fn new(back_tx: Sender<ToFrontend>, front_rx: Receiver<ToBackend>, codes: String) -> Self {
         let stock_codes = codes
             .split(",")
-            .filter(|x|check_stock_code(x))
+            .filter(|x| check_stock_code(x))
             .map(|x| x.to_string())
             .collect::<Vec<String>>();
         Self {
@@ -36,7 +36,7 @@ impl Back {
     pub fn init(&mut self) {
         self.refetch(false);
         #[warn(unused_assignments)]
-       let mut ticker = tick(Duration::from_secs(5));
+        let mut ticker = tick(Duration::from_secs(5));
         loop {
             select! {
                 recv(self.front_rx)->msg =>{
@@ -67,7 +67,6 @@ impl Back {
                         }
                     },
                  recv(ticker)->_msg =>{
-                    info!("tk");
                    self.refetch(false);
                 },
             }
@@ -85,12 +84,10 @@ impl Back {
                     error!(e)
                 }
             }
-        }else{
+        } else {
             if focus {
                 self.back_tx.send(ToFrontend::DataList(vec![])).ok();
             }
         }
-
-      
     }
 }

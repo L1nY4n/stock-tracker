@@ -12,5 +12,3 @@ pub enum ToBackend {
 pub enum ToFrontend {
     DataList(Vec<Stock>),
 }
-
-

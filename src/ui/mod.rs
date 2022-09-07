@@ -275,54 +275,57 @@ impl StockTrackerApp {
                             })
                             .response;
 
-                     
                         plot.on_hover_ui(|ui| {
-                         
                             ui.horizontal(|ui| {
                                 ui.group(|ui| {
-                                    ui.set_max_size(Vec2::new(60.0,240.0));
+                                    ui.set_max_size(Vec2::new(60.0, 240.0));
                                     ui.vertical(|ui| {
-                                        for (v, p) in &stock.asks {
+                                        for (v, p) in stock.asks.iter().rev() {
                                             ui.label(format!("{}({})", p, v));
                                         }
-                                        ui.separator();
+                                        ui.add(Separator::default().spacing(0.0));
                                         for (v, p) in &stock.bids {
                                             ui.label(format!("{}({})", p, v));
                                         }
                                     });
                                 });
-                                ui.group( | ui| {
+                                ui.group(|ui| {
                                     ui.vertical(|ui| {
                                         let bids = stock
-                                        .bids
-                                        .iter()
-                                        .map(|(v, p)| Bar::new((p - stock.new).into(), *v as f64).width(0.0080))
-                                        .collect();
+                                            .bids
+                                            .iter()
+                                            .map(|(v, p)| {
+                                                Bar::new((p - stock.new).into(), *v as f64)
+                                                    .width(0.0080)
+                                            })
+                                            .collect();
                                         let asks = stock
-                                        .asks
-                                        .iter()
-                                        .map(|(v, p)| Bar::new((p - stock.new).into(), *v as f64).width(0.0080))
-                                        .collect();
+                                            .asks
+                                            .iter()
+                                            .map(|(v, p)| {
+                                                Bar::new((p - stock.new).into(), *v as f64)
+                                                    .width(0.0080)
+                                            })
+                                            .collect();
 
-                                        let bid_chart = BarChart::new(bids).color(Color32::GREEN).horizontal();
-                                        let ask_chart = BarChart::new(asks).color(Color32::YELLOW).horizontal();
+                                        let bid_chart =
+                                            BarChart::new(bids).color(Color32::GREEN).horizontal();
+                                        let ask_chart =
+                                            BarChart::new(asks).color(Color32::YELLOW).horizontal();
 
                                         Plot::new(stock.code.to_string())
-                                     
-                                        .show_axes([false,true])
-                                       
-                                        .width(80.0)
-                                        .center_y_axis(true)
-                                        .data_aspect(10000.0) 
-                                        .show(ui, |plot_ui| {
-                                            plot_ui.bar_chart(bid_chart);
-                                            plot_ui.bar_chart(ask_chart)
-                                        })
-                                        .response;
+                                            .show_axes([false, true])
+                                            .width(80.0)
+                                            .center_y_axis(true)
+                                            .data_aspect(10000.0)
+                                            .show(ui, |plot_ui| {
+                                                plot_ui.bar_chart(bid_chart);
+                                                plot_ui.bar_chart(ask_chart)
+                                            })
+                                            .response;
                                     })
                                 })
-                                });
-                      
+                            });
                         });
                     });
 
