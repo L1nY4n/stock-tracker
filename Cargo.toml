@@ -1,21 +1,34 @@
 [package]
 name = "stock-tracker"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-eframe = {version = "0.19.0", features = ["persistence"]}
-tracing = "0.1.36"
-tracing-subscriber = "0.3.15"
-crossbeam="*"
-lazy_static = "1.4.0"
+eframe = {version = "0.29.1", features = ["persistence","__screenshot"]}
+
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+crossbeam="0.8.4"
+lazy_static = "1.5.0"
 serde = { version = "1.0.136", features = ["derive"] }
-url = "2.2.2"
-ureq = "2.5.0"
-encoding_rs = "0.8.31"
-chrono = "0.4.22"
-ehttp = "0.2.0"
-egui_extras = "0.19.0"
-regex = "1.6.0"
+url = "2.5.2"
+ureq = "2.10.1"
+encoding_rs = "0.8.35"
+chrono ={version = "0.4.38",features = ["serde"]}
+ehttp = "0.5.0"
+egui_extras = "0.29.1"
+regex = "1.11.1"
+egui_plot = "0.29.0"
+once_cell = "1.20.2"
+reqwest = { version = "0.12", features = ["json","blocking"] }
+
+
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+opt-level = "s"
+panic = "abort"
+strip = "debuginfo"
