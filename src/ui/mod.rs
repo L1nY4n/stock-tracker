@@ -91,11 +91,8 @@ impl StockTrackerApp {
                     };
 
                     ui.add(Label::new(
-                        RichText::new(self.time.clone())
-                        .text_style(egui::TextStyle::Small)
-                 
-                    )
-                    );
+                        RichText::new(self.time.clone()).text_style(egui::TextStyle::Small),
+                    ));
                 });
                 // controls
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -141,6 +138,7 @@ impl StockTrackerApp {
         ui.add_space(2.0);
         Grid::new("stock_grid")
             .max_col_width(56.0)
+            .min_col_width(30.0)
             .striped(true)
             .show(ui, |ui| {
                 for stock in self.stocks.values_mut().into_iter() {
@@ -183,15 +181,158 @@ impl StockTrackerApp {
                     });
 
                     ui.centered_and_justified(|ui| {
+                        let bids_bars = stock
+                            .data_bids()
+                            .iter()
+                            .map(|(v, p)| {
+                                Bar::new((p - stock.data_new()).into(), *v as f64).width(0.001)
+                            })
+                            .collect();
+
+                        let bid_chart = BarChart::new(bids_bars)
+                            .allow_hover(false)
+                            .color(Color32::LIGHT_GREEN);
+
+                        let asks_bar = stock
+                            .data_asks()
+                            .iter()
+                            .map(|(v, p)| {
+                                Bar::new((p - stock.data_new()).into(), *v as f64).width(0.001)
+                            })
+                            .collect();
+                        let ask_chart = BarChart::new(asks_bar)
+                            .allow_hover(false)
+                            .color(Color32::YELLOW);
+
+                        let plot = Plot::new(stock.code.to_string())
+                            .allow_zoom(false)
+                            .allow_drag(false)
+                            .allow_scroll(false)
+                            .show_grid([false, false])
+                            .show_axes([false, false])
+                            .sharp_grid_lines(false)
+                            .width(50.0)
+                            .height(16.0)
+                            .center_x_axis(true)
+                            .show(ui, |plot_ui| {
+                                plot_ui.bar_chart(bid_chart);
+                                plot_ui.bar_chart(ask_chart)
+                            })
+                            .response;
+
+                        plot.on_hover_ui(|ui| {
+                            ui.horizontal(|ui| {
+                                ui.group(|ui| {
+                                    ui.set_max_size(Vec2::new(120.0, 240.0));
+                                    ui.vertical(|ui| {
+                                        for (v, p) in stock.data_asks().iter().rev() {
+                                            ui.label(format!(
+                                                "({:.2}|{}){}",
+                                                (*v as f32) * (*p) * 0.01,
+                                                v,
+                                                p
+                                            ));
+                                        }
+                                        ui.add(Separator::default().spacing(0.0));
+                                        for (v, p) in stock.data_bids() {
+                                            ui.label(format!(
+                                                "({:.2}|{}){}",
+                                                (*v as f32) * (*p) * 0.01,
+                                                v,
+                                                p
+                                            ));
+                                        }
+                                    });
+                                });
+                                ui.group(|ui| {
+                                    ui.set_max_size(Vec2::new(100.0, 120.0));
+
+                                    let mut bids_text = vec![];
+                                    let bids = stock
+                                        .data_bids()
+                                        .iter()
+                                        .map(|(v, p)| {
+                                            bids_text.push(
+                                                Text::new(
+                                                    PlotPoint::new(-10.0, p - stock.data_new()),
+                                                    format!(
+                                                        "{:.2}    {}  -  {}  ",
+                                                        (*v as f32) * (*p) * 0.01,
+                                                        v,
+                                                        p
+                                                    ),
+                                                )
+                                                .anchor(Align2::RIGHT_CENTER),
+                                            );
+                                            Bar::new((p - stock.data_new()).into(), *v as f64)
+                                                .width(0.001)
+                                        })
+                                        .collect();
+
+                                    let mut asks_text = vec![];
+                                    let asks = stock
+                                        .data_asks()
+                                        .iter()
+                                        .map(|(v, p)| {
+                                            asks_text.push(
+                                                Text::new(
+                                                    PlotPoint::new(-10.0, p - stock.data_new()),
+                                                    format!(
+                                                        "{:.2}    {}  -  {}  ",
+                                                        (*v as f32) * (*p) * 0.01,
+                                                        v,
+                                                        p
+                                                    ),
+                                                )
+                                                .anchor(Align2::RIGHT_CENTER),
+                                            );
+                                            Bar::new((p - stock.data_new()).into(), *v as f64)
+                                                .width(0.001)
+                                        })
+                                        .collect();
+
+                                    let bid_chart =
+                                        BarChart::new(bids).color(Color32::GREEN).horizontal();
+                                    let ask_chart =
+                                        BarChart::new(asks).color(Color32::YELLOW).horizontal();
+
+                                    Plot::new(stock.code.to_string())
+                                        .show_grid(false)
+                                        .show_axes([false, false])
+                                        .sharp_grid_lines(false)
+                                        .show_background(false)
+                                        .show_x(false)
+                                        .show_y(true)
+                                        // .center_x_axis(true)
+                                        .show(ui, |plot_ui| {
+                                            plot_ui.bar_chart(bid_chart);
+                                            plot_ui.bar_chart(ask_chart);
+                                            plot_ui.hline(
+                                                HLine::new(0.0)
+                                                    .color(Color32::GRAY.linear_multiply(0.05)),
+                                            );
+                                            // bids_text.iter().for_each(|t| {
+                                            //     plot_ui.text(t.clone());
+                                            // });
+                                            // asks_text.iter().for_each(|t| {
+                                            //     plot_ui.text(t.clone());
+                                            // })
+                                        })
+                                        .response
+                                });
+                            });
+                        });
+                    });
+                    ui.centered_and_justified(|ui| {
                         let boxs = stock
                             .klines
                             .iter()
                             .enumerate()
                             .map(|(i, x)| {
                                 let fill_color = if x.close < x.open {
-                                    Color32::GREEN
+                                    Color32::BLUE
                                 } else {
-                                    Color32::RED
+                                    Color32::ORANGE
                                 };
 
                                 BoxElem::new(
@@ -374,128 +515,6 @@ impl StockTrackerApp {
                                 },
                             );
                         }
-                    });
-
-                    ui.centered_and_justified(|ui| {
-                        let bids_bars = stock
-                            .data_bids()
-                            .iter()
-                            .map(|(v, p)| {
-                                Bar::new((p - stock.data_new()).into(), *v as f64).width(0.001)
-                            })
-                            .collect();
-
-                        let bid_chart = BarChart::new(bids_bars)
-                            .allow_hover(false)
-                            .color(Color32::LIGHT_GREEN);
-
-                        let asks_bar = stock
-                            .data_asks()
-                            .iter()
-                            .map(|(v, p)| {
-                                Bar::new((p - stock.data_new()).into(), *v as f64).width(0.001)
-                            })
-                            .collect();
-                        let ask_chart = BarChart::new(asks_bar)
-                            .allow_hover(false)
-                            .color(Color32::YELLOW);
-
-                        let plot = Plot::new(stock.code.to_string())
-                            .allow_zoom(false)
-                            .allow_drag(false)
-                            .allow_scroll(false)
-                            .show_grid([false, false])
-                            .show_axes([false, false])
-                            .sharp_grid_lines(false)
-                            .width(50.0)
-                            .height(16.0)
-                            .center_x_axis(true)
-                            .show(ui, |plot_ui| {
-                                plot_ui.bar_chart(bid_chart);
-                                plot_ui.bar_chart(ask_chart)
-                            })
-                            .response;
-
-                        plot.on_hover_ui(|ui| {
-                            ui.vertical(|ui| {
-                                ui.group(|ui| {
-                                    ui.set_max_size(Vec2::new(200.0, 120.0));
-
-                                    let mut bids_text = vec![];
-                                    let bids = stock
-                                        .data_bids()
-                                        .iter()
-                                        .map(|(v, p)| {
-                                            bids_text.push(
-                                                Text::new(
-                                                    PlotPoint::new(-10.0, p - stock.data_new()),
-                                                    format!(
-                                                        "{:.2}    {}  -  {}  ",
-                                                        (*v as f32) * (*p) * 0.01,
-                                                        v,
-                                                        p
-                                                    ),
-                                                )
-                                                .anchor(Align2::RIGHT_CENTER),
-                                            );
-                                            Bar::new((p - stock.data_new()).into(), *v as f64)
-                                                .width(0.001)
-                                        })
-                                        .collect();
-
-                                    let mut asks_text = vec![];
-                                    let asks = stock
-                                        .data_asks()
-                                        .iter()
-                                        .map(|(v, p)| {
-                                            asks_text.push(
-                                                Text::new(
-                                                    PlotPoint::new(-10.0, p - stock.data_new()),
-                                                    format!(
-                                                        "{:.2}    {}  -  {}  ",
-                                                        (*v as f32) * (*p) * 0.01,
-                                                        v,
-                                                        p
-                                                    ),
-                                                )
-                                                .anchor(Align2::RIGHT_CENTER),
-                                            );
-                                            Bar::new((p - stock.data_new()).into(), *v as f64)
-                                                .width(0.001)
-                                        })
-                                        .collect();
-
-                                    let bid_chart =
-                                        BarChart::new(bids).color(Color32::GREEN).horizontal();
-                                    let ask_chart =
-                                        BarChart::new(asks).color(Color32::YELLOW).horizontal();
-
-                                    Plot::new(stock.code.to_string())
-                                        .show_grid(false)
-                                        .show_axes([false, false])
-                                        .sharp_grid_lines(false)
-                                        .show_background(false)
-                                        .show_x(false)
-                                        .show_y(true)
-                                        .center_x_axis(true)
-                                        .show(ui, |plot_ui| {
-                                            plot_ui.bar_chart(bid_chart);
-                                            plot_ui.bar_chart(ask_chart);
-                                            plot_ui.hline(
-                                                HLine::new(0.0)
-                                                    .color(Color32::GRAY.linear_multiply(0.05)),
-                                            );
-                                            bids_text.iter().for_each(|t| {
-                                                plot_ui.text(t.clone());
-                                            });
-                                            asks_text.iter().for_each(|t| {
-                                                plot_ui.text(t.clone());
-                                            })
-                                        })
-                                        .response
-                                });
-                            });
-                        });
                     });
 
                     ui.end_row();
@@ -702,7 +721,7 @@ fn load_font(ctx: &egui::Context) {
         "AlibabaPuHuiTi-3-55-Regular".to_owned(),
         eframe::egui::FontData::from_static(include_bytes!(
             "../../resources/AlibabaPuHuiTi-3-55-Regular.ttf"
-        )),
+        )).into(),
     ); // .ttf and .otf supported
 
     fonts
